@@ -1,0 +1,28 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function eventDoc(slug) {
+      return firestore.get(/databases/(default)/documents/events/$(slug));
+    }
+
+    function isEventHost(slug) {
+      return request.auth != null
+          && eventDoc(slug).data != null
+          && (
+            request.auth.uid == eventDoc(slug).data.hostId
+            || (
+              eventDoc(slug).data.keys().hasAll(['hostIds'])
+              && eventDoc(slug).data.hostIds.hasAny([request.auth.uid])
+            )
+          );
+    }
+
+    match /events/{slug}/{fileName} {
+      allow read: if fileName.matches('cover\\..+');
+      allow write: if fileName.matches('cover\\..+')
+                  && isEventHost(slug)
+                  && request.resource.size < 5 * 1024 * 1024
+                  && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

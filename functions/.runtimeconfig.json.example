@@ -1,0 +1,21 @@
+{
+  "resend": {
+    "api_key": "re_xxxxxxxx",
+    "from_email": "Mingle <invites@mail.mingle.app>"
+  },
+  "twilio": {
+    "account_sid": "ACxxxxxxxx",
+    "auth_token": "xxxxxxxx",
+    "messaging_service_sid": "MGxxxxxxxx"
+  },
+  "ratelimit": {
+    "email_per_hour": "500",
+    "email_per_day": "2000",
+    "sms_per_hour": "200",
+    "sms_per_day": "500",
+    "ip_per_hour": "60"
+  },
+  "cors": {
+    "allowed_origins": "http://localhost:5173,https://mingle.app"
+  }
+}

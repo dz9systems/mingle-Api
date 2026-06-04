@@ -1,0 +1,28 @@
+{
+  "name": "mingle-functions",
+  "version": "1.0.0",
+  "private": true,
+  "main": "lib/index.js",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "shell": "npm run build && firebase functions:shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.2",
+    "firebase-functions": "^6.3.0",
+    "libphonenumber-js": "^1.11.18",
+    "resend": "^4.1.2",
+    "twilio": "^5.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.18",
+    "typescript": "^5.5.4"
+  }
+}
