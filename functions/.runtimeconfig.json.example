@@ -16,6 +16,6 @@
     "ip_per_hour": "60"
   },
   "cors": {
-    "allowed_origins": "http://localhost:5173,https://mingle.app"
+    "allowed_origins": "http://localhost:5173,https://mingle.app,https://www.themingleapp.com"
   }
 }
