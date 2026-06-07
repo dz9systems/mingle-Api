@@ -5,6 +5,10 @@ name: Deploy Functions
 #
 # GitHub repository secrets required:
 #   FIREBASE_SERVICE_ACCOUNT, FIREBASE_PROJECT_ID
+#
+# The deploy service account (client_email in FIREBASE_SERVICE_ACCOUNT JSON) needs:
+#   roles/firebase.admin          — deploy Cloud Functions
+#   roles/secretmanager.secretAccessor — validate bound secrets during deploy
 
 on:
   push:
@@ -52,6 +56,12 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Install Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Show deploy service account
+        run: gcloud auth list --filter=status:ACTIVE --format='value(account)'
 
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
