@@ -98,7 +98,7 @@ export async function searchSpotifyTracks(
     title: track.name,
     artist: track.artists?.map((artist) => artist.name).join(', ') || 'Unknown Artist',
     albumArt: track.album?.images?.[2]?.url || track.album?.images?.[0]?.url || null,
-    previewUrl: track.preview_url,
+    previewUrl: track.preview_url ?? null,
     spotifyUrl:
       track.external_urls?.spotify || `https://open.spotify.com/track/${track.id}`,
   }));
