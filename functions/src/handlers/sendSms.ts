@@ -94,13 +94,25 @@ export async function handleSendSms(req: Request, res: Response): Promise<void> 
 
   const sent = outcomes.filter((o) => o.success).length;
   const failed = outcomes.filter((o) => !o.success).length;
+  const errors = outcomes
+    .filter((o) => !o.success && o.error)
+    .map((o) => o.error as string);
+
+  if (errors.length > 0) {
+    console.error('sendSms failures:', errors);
+  }
 
   const response: BulkSendResponse = {
     ok: failed === 0,
     sent,
     failed,
     skipped,
-    message: failed > 0 ? `${failed} recipient(s) failed to send` : undefined,
+    message:
+      errors.length > 0
+        ? errors.join(' · ')
+        : failed > 0
+          ? `${failed} recipient(s) failed to send`
+          : undefined,
   };
 
   res.status(200).json(response);

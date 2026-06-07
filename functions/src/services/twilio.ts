@@ -11,6 +11,21 @@ import { logSmsSend } from './invitees';
 
 let twilioClient: ReturnType<typeof twilio> | null = null;
 
+function formatTwilioError(error: unknown): string {
+  if (error && typeof error === 'object') {
+    const twilioError = error as { message?: string; code?: number };
+    if (twilioError.message) {
+      return twilioError.code
+        ? `[${twilioError.code}] ${twilioError.message}`
+        : twilioError.message;
+    }
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'send_failed';
+}
+
 function getTwilio() {
   if (!twilioClient) {
     const accountSid = getTwilioAccountSid();
@@ -94,8 +109,9 @@ export async function sendSmsToRecipient(params: {
       success,
       error: success ? undefined : message.status,
     };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'send_failed';
+  } catch (error: unknown) {
+    const message = formatTwilioError(error);
+    console.error('Twilio SMS failed:', { to, error: message });
     await logSmsSend({
       hostUid,
       eventSlug: event.slug,
