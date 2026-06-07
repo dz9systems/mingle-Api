@@ -5,6 +5,36 @@ type RuntimeConfig = Record<string, Record<string, string>>;
 
 let cachedRuntimeConfig: RuntimeConfig | null | undefined;
 
+function loadEnvFile(filePath: string, override: boolean): void {
+  if (!fs.existsSync(filePath)) return;
+
+  for (const line of fs.readFileSync(filePath, 'utf8').split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    const separator = trimmed.indexOf('=');
+    if (separator === -1) continue;
+
+    const key = trimmed.slice(0, separator).trim();
+    const value = trimmed.slice(separator + 1).trim();
+    if (!key) continue;
+
+    if (override || !process.env[key]) {
+      process.env[key] = value;
+    }
+  }
+}
+
+function loadLocalEnvFiles(): void {
+  const envDir = path.join(__dirname, '..');
+  const overrideInEmulator = process.env.FUNCTIONS_EMULATOR === 'true';
+
+  loadEnvFile(path.join(envDir, '.env'), overrideInEmulator);
+  loadEnvFile(path.join(envDir, '.secret.local'), overrideInEmulator);
+}
+
+loadLocalEnvFiles();
+
 function loadRuntimeConfig(): RuntimeConfig {
   if (cachedRuntimeConfig !== undefined) {
     return cachedRuntimeConfig || {};

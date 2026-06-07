@@ -56,7 +56,15 @@ async function getSpotifyAccessToken(): Promise<string> {
   });
 
   if (!res.ok) {
-    throw new Error(`Spotify token request failed (${res.status})`);
+    let detail = '';
+    try {
+      const body = (await res.json()) as { error?: string; error_description?: string };
+      detail = body.error_description || body.error || '';
+    } catch {
+      // Ignore JSON parse errors.
+    }
+    const suffix = detail ? `: ${detail}` : '';
+    throw new Error(`Spotify token request failed (${res.status})${suffix}`);
   }
 
   const data = (await res.json()) as SpotifyTokenResponse;
