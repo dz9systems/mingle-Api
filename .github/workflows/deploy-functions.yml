@@ -7,8 +7,8 @@ name: Deploy Functions
 #   FIREBASE_SERVICE_ACCOUNT, FIREBASE_PROJECT_ID
 #
 # The deploy service account (client_email in FIREBASE_SERVICE_ACCOUNT JSON) needs:
-#   roles/firebase.admin          — deploy Cloud Functions
-#   roles/secretmanager.secretAccessor — validate bound secrets during deploy
+#   roles/firebase.admin — deploy Cloud Functions
+#   roles/secretmanager.secretAccessor (project-level) — read bound secrets during deploy
 
 on:
   push:
@@ -70,10 +70,11 @@ jobs:
         env:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
         run: |
-          gcloud secrets versions describe latest \
+          # secretAccessor grants accessSecretVersion, not versions.get — use access, not describe
+          gcloud secrets versions access latest \
             --secret=RESEND_API_KEY \
             --project="$FIREBASE_PROJECT_ID" \
-            --format='value(name)'
+            > /dev/null
 
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
