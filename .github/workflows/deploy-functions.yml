@@ -53,6 +53,7 @@ jobs:
         run: npm run build
 
       - name: Authenticate to Google Cloud
+        id: auth
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
@@ -61,10 +62,23 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Show deploy service account
-        run: gcloud auth list --filter=status:ACTIVE --format='value(account)'
+        run: |
+          echo "Auth service account: ${{ steps.auth.outputs.service_account_email }}"
+          gcloud auth list --filter=status:ACTIVE --format='value(account)'
+
+      - name: Verify Secret Manager access
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          gcloud secrets versions describe latest \
+            --secret=RESEND_API_KEY \
+            --project="$FIREBASE_PROJECT_ID" \
+            --format='value(name)'
 
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
       - name: Deploy functions
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
         run: firebase deploy --only functions --project "${{ secrets.FIREBASE_PROJECT_ID }}" --non-interactive --force
