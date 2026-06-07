@@ -17,6 +17,7 @@
   "dependencies": {
     "firebase-admin": "^13.0.2",
     "firebase-functions": "^6.3.0",
+    "googleapis": "^173.0.0",
     "libphonenumber-js": "^1.11.18",
     "resend": "^4.1.2",
     "twilio": "^5.4.2"

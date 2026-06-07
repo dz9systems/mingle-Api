@@ -2,6 +2,75 @@ import type { Request, Response } from 'express';
 import * as admin from 'firebase-admin';
 import type { AuthContext, BulkSendRequest } from '../types';
 
+export async function verifyFirebaseAuth(
+  req: Request,
+  res: Response
+): Promise<{ uid: string; email?: string } | null> {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) {
+    res.status(401).send('unauthorized');
+    return null;
+  }
+
+  const idToken = header.slice('Bearer '.length).trim();
+  if (!idToken) {
+    res.status(401).send('unauthorized');
+    return null;
+  }
+
+  try {
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    return { uid: decoded.uid, email: decoded.email };
+  } catch {
+    res.status(401).send('unauthorized');
+    return null;
+  }
+}
+
+export async function isHostOfEvent(uid: string, slug: string): Promise<boolean> {
+  const eventSnap = await admin.firestore().doc(`events/${slug}`).get();
+  if (!eventSnap.exists) {
+    return false;
+  }
+
+  const hostIds: string[] = eventSnap.data()?.hostIds || [];
+  return hostIds.includes(uid);
+}
+
+export async function verifyHostAuthForSlug(
+  req: Request,
+  res: Response,
+  slug: string
+): Promise<AuthContext | null> {
+  const auth = await verifyFirebaseAuth(req, res);
+  if (!auth) {
+    return null;
+  }
+
+  if (!slug || typeof slug !== 'string') {
+    res.status(400).send('missing_event_slug');
+    return null;
+  }
+
+  const eventSnap = await admin.firestore().doc(`events/${slug}`).get();
+  if (!eventSnap.exists) {
+    res.status(404).send('not_found');
+    return null;
+  }
+
+  const hostIds: string[] = eventSnap.data()?.hostIds || [];
+  if (!hostIds.includes(auth.uid)) {
+    res.status(403).send('forbidden');
+    return null;
+  }
+
+  return {
+    uid: auth.uid,
+    eventSlug: slug,
+    email: auth.email,
+  };
+}
+
 export async function verifyHostAuth(
   req: Request,
   res: Response
@@ -45,5 +114,9 @@ export async function verifyHostAuth(
     return null;
   }
 
-  return { uid: decoded.uid, eventSlug: slug };
+  return {
+    uid: decoded.uid,
+    eventSlug: slug,
+    email: decoded.email,
+  };
 }

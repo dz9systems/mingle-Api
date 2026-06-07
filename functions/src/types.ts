@@ -47,4 +47,36 @@ export type SendOutcome = {
 export type AuthContext = {
   uid: string;
   eventSlug: string;
+  email?: string;
+};
+
+export type GoogleCalendarIntegration = {
+  refreshToken: string;
+  accessToken?: string;
+  accessTokenExpiresAt?: number;
+  googleEmail?: string;
+  connectedAt: number;
+  calendarId: string;
+};
+
+export type CalendarEventLink = {
+  googleEventId: string;
+  hostUid: string;
+  lastSyncedAt: number;
+  attendeeCount: number;
+};
+
+export type GoogleCalendarStatusResponse = {
+  connected: boolean;
+  googleEmail?: string;
+  synced?: boolean;
+  lastSyncedAt?: number;
+  attendeeCount?: number;
+};
+
+export type GoogleCalendarSyncResponse = {
+  ok: boolean;
+  googleEventId?: string;
+  attendeeCount: number;
+  message?: string;
 };

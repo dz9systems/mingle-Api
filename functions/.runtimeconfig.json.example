@@ -1,7 +1,8 @@
 {
   "resend": {
     "api_key": "re_xxxxxxxx",
-    "from_email": "Mingle <invites@mail.mingle.app>"
+    "from_email": "Mingle <invites@mail.themingleapp.com>",
+    "reply_to": "themingleapp@gmail.com"
   },
   "twilio": {
     "account_sid": "ACxxxxxxxx",
@@ -17,5 +18,18 @@
   },
   "cors": {
     "allowed_origins": "http://localhost:5173,https://mingle.app,https://www.themingleapp.com"
+  },
+  "frontend": {
+    "url": "https://www.themingleapp.com"
+  },
+  "google": {
+    "client_id": "xxxxxxxx.apps.googleusercontent.com",
+    "client_secret": "xxxxxxxx",
+    "oauth_redirect_uri": "https://www.themingleapp.com/api/integrations/google/calendar/callback",
+    "oauth_state_secret": "random-long-secret"
+  },
+  "spotify": {
+    "client_id": "xxxxxxxx",
+    "client_secret": "xxxxxxxx"
   }
 }

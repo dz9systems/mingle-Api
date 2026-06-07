@@ -7,17 +7,50 @@ type MessageParams = {
   customMessage?: string;
 };
 
+function formatSmsEventDetails(event: BulkSendEvent): string {
+  const whenParts: string[] = [];
+  if (event.date?.trim()) whenParts.push(event.date.trim());
+  if (event.time?.trim()) whenParts.push(event.time.trim());
+
+  const when = whenParts.join(', ');
+  const location = event.location?.trim();
+
+  if (when && location) return ` — ${when}, ${location}`;
+  if (when) return ` — ${when}`;
+  if (location) return ` in ${location}`;
+  return '';
+}
+
+function defaultSmsInviteMessage(params: MessageParams): string {
+  const { event, recipientName } = params;
+  const greeting = recipientName?.trim() ? `Hi ${recipientName.trim()}! ` : '';
+  const details = formatSmsEventDetails(event);
+
+  return `${greeting}You're invited to ${event.name}${details}. RSVP: ${event.inviteUrl}`;
+}
+
+function appendRsvpLinkIfMissing(body: string, inviteUrl: string): string {
+  if (!inviteUrl || body.includes(inviteUrl)) {
+    return body;
+  }
+  const separator =
+    body.endsWith('.') || body.endsWith('!') || body.endsWith('?') ? ' ' : '. ';
+  return `${body}${separator}RSVP: ${inviteUrl}`;
+}
+
 export function defaultInviteMessage(params: MessageParams): string {
   const { event, channel } = params;
-  const host = event.hostName || 'Your friend';
-  const lines: string[] = [];
 
   if (channel === 'sms') {
-    lines.push(`${host} is hosting ${event.name}.`);
-  } else {
-    const greeting = params.recipientName ? `Hi ${params.recipientName}!` : 'Hi!';
-    lines.push(`${greeting} ${event.hostName || 'Your friend'} is hosting ${event.name} and would love to have you there.`);
+    return defaultSmsInviteMessage(params);
   }
+
+  const host = event.hostName || 'Your friend';
+  const lines: string[] = [];
+  const greeting = params.recipientName ? `Hi ${params.recipientName}!` : 'Hi!';
+  lines.push(
+    `${greeting} ${host} is hosting ${event.name} and would love to have you there.`
+  );
 
   if (event.date || event.time) {
     lines.push(
@@ -38,6 +71,9 @@ export function defaultInviteMessage(params: MessageParams): string {
 export function resolveMessageBody(params: MessageParams): string {
   const trimmed = params.customMessage?.trim();
   if (trimmed) {
+    if (params.channel === 'sms') {
+      return appendRsvpLinkIfMissing(trimmed, params.event.inviteUrl);
+    }
     return trimmed;
   }
   return defaultInviteMessage(params);

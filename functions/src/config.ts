@@ -54,6 +54,10 @@ export function getResendFromEmail(): string {
   );
 }
 
+export function getResendReplyToEmail(): string {
+  return process.env.RESEND_REPLY_TO || configValue('resend', 'reply_to') || '';
+}
+
 export function getTwilioAccountSid(): string {
   return process.env.TWILIO_ACCOUNT_SID || configValue('twilio', 'account_sid') || '';
 }
@@ -68,6 +72,10 @@ export function getTwilioMessagingServiceSid(): string {
     configValue('twilio', 'messaging_service_sid') ||
     ''
   );
+}
+
+export function getTwilioFromNumber(): string {
+  return process.env.TWILIO_FROM_NUMBER || configValue('twilio', 'from_number') || '';
 }
 
 export function getRateLimitConfig() {
@@ -114,4 +122,49 @@ export function getAllowedOrigins(): string[] {
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
+}
+
+export function getGoogleClientId(): string {
+  return process.env.GOOGLE_CLIENT_ID || configValue('google', 'client_id') || '';
+}
+
+export function getGoogleClientSecret(): string {
+  return process.env.GOOGLE_CLIENT_SECRET || configValue('google', 'client_secret') || '';
+}
+
+export function getGoogleOAuthRedirectUri(): string {
+  return (
+    process.env.GOOGLE_OAUTH_REDIRECT_URI ||
+    configValue('google', 'oauth_redirect_uri') ||
+    ''
+  );
+}
+
+export function getGoogleOAuthStateSecret(): string {
+  return (
+    process.env.GOOGLE_OAUTH_STATE_SECRET ||
+    configValue('google', 'oauth_state_secret') ||
+    getGoogleClientSecret() ||
+    'dev-oauth-state-secret'
+  );
+}
+
+export function getSpotifyClientId(): string {
+  return process.env.SPOTIFY_CLIENT_ID || configValue('spotify', 'client_id') || '';
+}
+
+export function getSpotifyClientSecret(): string {
+  return process.env.SPOTIFY_CLIENT_SECRET || configValue('spotify', 'client_secret') || '';
+}
+
+export function getFrontendUrl(): string {
+  const explicit =
+    process.env.FRONTEND_URL || configValue('frontend', 'url') || '';
+  if (explicit) {
+    return explicit.replace(/\/$/, '');
+  }
+
+  const allowed = getAllowedOrigins();
+  const production = allowed.find((origin) => origin.startsWith('https://'));
+  return (production || allowed[0] || 'http://localhost:5173').replace(/\/$/, '');
 }

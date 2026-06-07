@@ -79,6 +79,7 @@ export async function handleSendEmail(req: Request, res: Response): Promise<void
         event: data.event,
         customMessage: data.customMessage,
         hostUid: auth.uid,
+        hostEmail: auth.email,
       });
       outcomes.push(outcome);
     });

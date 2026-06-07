@@ -76,7 +76,12 @@ export async function logEmailSend(params: {
   error?: string;
 }): Promise<void> {
   await admin.firestore().collection('emailLog').add({
-    ...params,
+    hostUid: params.hostUid,
+    eventSlug: params.eventSlug,
+    recipientEmail: params.recipientEmail,
+    recipientName: params.recipientName,
+    success: params.success,
+    ...(params.error !== undefined ? { error: params.error } : {}),
     createdAt: Date.now(),
   });
 }
@@ -90,7 +95,12 @@ export async function logSmsSend(params: {
   error?: string;
 }): Promise<void> {
   await admin.firestore().collection('smsLog').add({
-    ...params,
+    hostUid: params.hostUid,
+    eventSlug: params.eventSlug,
+    recipientPhone: params.recipientPhone,
+    recipientName: params.recipientName,
+    success: params.success,
+    ...(params.error !== undefined ? { error: params.error } : {}),
     createdAt: Date.now(),
   });
 }

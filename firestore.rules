@@ -43,5 +43,7 @@ service cloud.firestore {
     match /smsLog/{logId}     { allow read, write: if false; }
     match /emailLog/{logId}   { allow read, write: if false; }
     match /rateLimits/{uid}   { allow read, write: if false; }
+    match /hostIntegrations/{uid} { allow read, write: if false; }
+    match /calendarEvents/{slug}  { allow read, write: if false; }
   }
 }

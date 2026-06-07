@@ -32,6 +32,30 @@
       {
         "source": "/api/send/sms",
         "function": "sendSms"
+      },
+      {
+        "source": "/api/spotify/search",
+        "function": "spotifySearch"
+      },
+      {
+        "source": "/api/integrations/google/calendar/connect",
+        "function": "googleCalendarConnect"
+      },
+      {
+        "source": "/api/integrations/google/calendar/callback",
+        "function": "googleCalendarCallback"
+      },
+      {
+        "source": "/api/integrations/google/calendar/status",
+        "function": "googleCalendarStatus"
+      },
+      {
+        "source": "/api/integrations/google/calendar/disconnect",
+        "function": "googleCalendarDisconnect"
+      },
+      {
+        "source": "/api/integrations/google/calendar/sync",
+        "function": "googleCalendarSync"
       }
     ]
   },

@@ -3,6 +3,7 @@ import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import {
   getTwilioAccountSid,
   getTwilioAuthToken,
+  getTwilioFromNumber,
   getTwilioMessagingServiceSid,
 } from '../config';
 import type { BulkRecipient, BulkSendEvent, SendOutcome } from '../types';
@@ -73,8 +74,11 @@ export async function sendSmsToRecipient(params: {
   }
 
   const messagingServiceSid = getTwilioMessagingServiceSid();
-  if (!messagingServiceSid) {
-    throw new Error('TWILIO_MESSAGING_SERVICE_SID is not configured');
+  const fromNumber = getTwilioFromNumber();
+  if (!messagingServiceSid && !fromNumber) {
+    throw new Error(
+      'Configure TWILIO_MESSAGING_SERVICE_SID or TWILIO_FROM_NUMBER for SMS'
+    );
   }
 
   const body = resolveMessageBody({
@@ -84,12 +88,12 @@ export async function sendSmsToRecipient(params: {
     customMessage,
   });
 
+  const sendParams = fromNumber
+    ? { to, from: fromNumber, body }
+    : { to, messagingServiceSid, body };
+
   try {
-    const message = await getTwilio().messages.create({
-      to,
-      messagingServiceSid,
-      body,
-    });
+    const message = await getTwilio().messages.create(sendParams);
 
     const success = ['queued', 'accepted', 'sending', 'sent', 'delivered'].includes(
       message.status
@@ -101,13 +105,13 @@ export async function sendSmsToRecipient(params: {
       recipientPhone: to,
       recipientName: recipient.name,
       success,
-      error: success ? undefined : message.status,
+      ...(success ? {} : { error: message.status }),
     });
 
     return {
       recipient: { ...recipient, phone: to },
       success,
-      error: success ? undefined : message.status,
+      ...(success ? {} : { error: message.status }),
     };
   } catch (error: unknown) {
     const message = formatTwilioError(error);

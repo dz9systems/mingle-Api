@@ -1,7 +1,8 @@
 import { Resend } from 'resend';
-import { getResendApiKey, getResendFromEmail } from '../config';
+import { getResendApiKey, getResendFromEmail, getResendReplyToEmail } from '../config';
 import type { BulkRecipient, BulkSendEvent, SendOutcome } from '../types';
 import { buildEmailHtml, resolveMessageBody } from '../utils/messages';
+import { isValidEmail, normalizeEmail } from '../utils/validation';
 import { logEmailSend } from './invitees';
 
 let resendClient: Resend | null = null;
@@ -17,13 +18,27 @@ function getResend(): Resend {
   return resendClient;
 }
 
+function resolveReplyTo(hostEmail?: string): string | undefined {
+  if (hostEmail && isValidEmail(hostEmail)) {
+    return normalizeEmail(hostEmail);
+  }
+
+  const fallback = getResendReplyToEmail().trim();
+  if (fallback && isValidEmail(fallback)) {
+    return normalizeEmail(fallback);
+  }
+
+  return undefined;
+}
+
 export async function sendEmailToRecipient(params: {
   recipient: BulkRecipient;
   event: BulkSendEvent;
   customMessage?: string;
   hostUid: string;
+  hostEmail?: string;
 }): Promise<SendOutcome> {
-  const { recipient, event, customMessage, hostUid } = params;
+  const { recipient, event, customMessage, hostUid, hostEmail } = params;
   const email = recipient.email?.trim();
 
   if (!email) {
@@ -49,13 +64,14 @@ export async function sendEmailToRecipient(params: {
   });
 
   try {
+    const replyTo = resolveReplyTo(hostEmail);
     const result = await getResend().emails.send({
       from: getResendFromEmail(),
       to: email,
       subject,
       html,
       text: bodyText,
-      replyTo: getResendFromEmail().match(/<([^>]+)>/)?.[1],
+      ...(replyTo ? { replyTo } : {}),
     });
 
     const success = !result.error;
