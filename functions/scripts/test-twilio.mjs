@@ -2,7 +2,7 @@
  * Quick Twilio diagnostic. Usage:
  *   node scripts/test-twilio.mjs +15551234567
  *
- * Loads functions/.env automatically (same keys as production).
+ * Loads functions/.env and functions/.secret.local automatically.
  */
 
 import fs from 'fs';
@@ -11,13 +11,10 @@ import { fileURLToPath } from 'url';
 import twilio from 'twilio';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const envPath = path.join(__dirname, '..', '.env');
+const envDir = path.join(__dirname, '..');
 
 function loadEnv(filePath) {
-  if (!fs.existsSync(filePath)) {
-    console.error('Missing .env at', filePath);
-    process.exit(1);
-  }
+  if (!fs.existsSync(filePath)) return;
   for (const line of fs.readFileSync(filePath, 'utf8').split('\n')) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
@@ -29,7 +26,13 @@ function loadEnv(filePath) {
   }
 }
 
-loadEnv(envPath);
+loadEnv(path.join(envDir, '.env'));
+loadEnv(path.join(envDir, '.secret.local'));
+
+if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+  console.error('Missing Twilio credentials in .env / .secret.local');
+  process.exit(1);
+}
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID || '';
 const authToken = process.env.TWILIO_AUTH_TOKEN || '';

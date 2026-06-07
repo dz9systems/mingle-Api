@@ -6,5 +6,6 @@ functions/node_modules/
 .runtimeconfig.json
 functions/.runtimeconfig.json
 functions/.env
+functions/.secret.local
 .env
 .firebaserc
