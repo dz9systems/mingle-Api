@@ -52,8 +52,8 @@ export async function handleUploadGuestAvatar(req: Request, res: Response): Prom
   }
 
   try {
-    const url = await uploadGuestAvatarToStorage(email, buffer, contentType);
-    res.status(200).json({ url });
+    const { url, path } = await uploadGuestAvatarToStorage(email, buffer, contentType);
+    res.status(200).json({ url, path });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'upload_failed';
     console.error('uploadGuestAvatar failed:', message);

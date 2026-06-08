@@ -38,11 +38,16 @@ export function validateGuestAvatarUpload(
   return { ok: true };
 }
 
+export type GuestAvatarUploadResult = {
+  url: string;
+  path: string;
+};
+
 export async function uploadGuestAvatarToStorage(
   email: string,
   buffer: Buffer,
   contentType: string
-): Promise<string> {
+): Promise<GuestAvatarUploadResult> {
   const bucket = admin.storage().bucket();
   const key = guestStorageKey(email);
   const ext = extFromContentType(contentType);
@@ -62,5 +67,8 @@ export async function uploadGuestAvatarToStorage(
   });
 
   const encodedPath = encodeURIComponent(filePath);
-  return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${token}`;
+  return {
+    url: `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${token}`,
+    path: filePath,
+  };
 }
