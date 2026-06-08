@@ -3,7 +3,13 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function isSignedIn() { return request.auth != null; }
     function isHostOf(eventDoc) {
-      return isSignedIn() && eventDoc.data.hostIds.hasAny([request.auth.uid]);
+      return isSignedIn()
+        && eventDoc != null
+        && (
+          eventDoc.data.hostId == request.auth.uid
+          || ('hostIds' in eventDoc.data
+            && eventDoc.data.hostIds.hasAny([request.auth.uid]))
+        );
     }
 
     match /events/{slug} {
@@ -31,6 +37,7 @@ service cloud.firestore {
       match /songs/{songId} {
         allow read: if true;
         allow create, update: if true;
+        allow delete: if isHostOf(get(/databases/$(database)/documents/events/$(slug)));
       }
 
       match /teamAssignments/{uid} {
