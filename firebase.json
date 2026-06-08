@@ -38,6 +38,10 @@
         "function": "spotifySearch"
       },
       {
+        "source": "/api/upload/guest-avatar",
+        "function": "uploadGuestAvatar"
+      },
+      {
         "source": "/api/integrations/google/calendar/connect",
         "function": "googleCalendarConnect"
       },

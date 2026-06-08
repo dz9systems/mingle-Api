@@ -11,6 +11,7 @@ import {
 import { handleSendEmail } from './handlers/sendEmail';
 import { handleSendSms } from './handlers/sendSms';
 import { handleSpotifySearch } from './handlers/spotifySearch';
+import { handleUploadGuestAvatar } from './handlers/uploadGuestAvatar';
 import { resetStaleRateLimitBuckets } from './utils/rateLimit';
 
 admin.initializeApp();
@@ -46,6 +47,7 @@ export const googleCalendarDisconnect = onRequest(
 export const googleCalendarSync = onRequest(runtimeOptions, handleGoogleCalendarSync);
 
 export const spotifySearch = onRequest(runtimeOptions, handleSpotifySearch);
+export const uploadGuestAvatar = onRequest(runtimeOptions, handleUploadGuestAvatar);
 
 export const resetRateLimits = onSchedule(
   {
