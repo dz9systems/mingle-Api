@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "build": "npm --prefix functions run build",
-    "serve": "npm run build && firebase emulators:start --only functions,auth",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "serve:auth": "npm run build && firebase emulators:start --only functions,auth",
     "serve:all": "npm run build && firebase emulators:start"
   }
 }

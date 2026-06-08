@@ -12,6 +12,21 @@ service cloud.firestore {
         );
     }
 
+    // Allow a signed-in user to add themselves as co-host via a valid invite link.
+    function isJoiningAsCohost() {
+      return isSignedIn()
+        && resource.data.cohostToken is string
+        && resource.data.cohostToken.size() > 0
+        && request.resource.data.cohostToken == resource.data.cohostToken
+        && request.resource.data.hostId == resource.data.hostId
+        && !isHostOf(resource)
+        && request.resource.data.hostIds.hasAll(
+          ('hostIds' in resource.data) ? resource.data.hostIds : [resource.data.hostId]
+        )
+        && request.resource.data.hostIds.hasAny([request.auth.uid])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hostIds', 'hosts']);
+    }
+
     match /events/{slug} {
       allow read: if true;
 
@@ -19,7 +34,8 @@ service cloud.firestore {
                      && request.resource.data.hostId == request.auth.uid
                      && request.auth.uid in request.resource.data.hostIds;
 
-      allow update, delete: if isHostOf(resource);
+      allow update: if isHostOf(resource) || isJoiningAsCohost();
+      allow delete: if isHostOf(resource);
 
       match /rsvps/{uid} {
         allow read: if true;
