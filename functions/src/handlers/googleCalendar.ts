@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { getFrontendUrl } from '../config';
+import { getFrontendUrl, getGoogleOAuthRedirectUri } from '../config';
 import { applyCors } from '../middleware/cors';
 import { verifyFirebaseAuth, verifyHostAuthForSlug } from '../middleware/auth';
 import {
@@ -16,7 +16,29 @@ function resolveReturnPath(eventSlug: string, raw?: unknown): string {
   if (typeof raw === 'string' && raw.startsWith('/') && !raw.includes('://')) {
     return raw;
   }
-  return `/e/${eventSlug}?calendar=connected`;
+  return `/e/${eventSlug}#guests`;
+}
+
+function appendSearchParam(path: string, key: string, value: string): string {
+  const hashIdx = path.indexOf('#');
+  const hash = hashIdx === -1 ? '' : path.slice(hashIdx);
+  const base = hashIdx === -1 ? path : path.slice(0, hashIdx);
+  const joiner = base.includes('?') ? '&' : '?';
+  return `${base}${joiner}${key}=${encodeURIComponent(value)}${hash}`;
+}
+
+function redirectWithCalendarResult(
+  res: Response,
+  base: string,
+  returnPath: string,
+  result: 'connected' | 'error',
+  reason?: string
+): void {
+  let path = appendSearchParam(returnPath, 'calendar', result);
+  if (reason) {
+    path = appendSearchParam(path, 'reason', reason);
+  }
+  res.redirect(`${base}${path}`);
 }
 
 export async function handleGoogleCalendarConnect(
@@ -52,7 +74,8 @@ export async function handleGoogleCalendarConnect(
       returnPath,
     });
     const authUrl = buildGoogleAuthUrl(state);
-    res.status(200).json({ authUrl });
+    const redirectUri = getGoogleOAuthRedirectUri();
+    res.status(200).json({ authUrl, redirectUri });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'internal_error';
     res.status(500).send(message);
@@ -67,18 +90,18 @@ export async function handleGoogleCalendarCallback(
   const state = typeof req.query.state === 'string' ? req.query.state : '';
   const oauthError = typeof req.query.error === 'string' ? req.query.error : '';
 
-  const fallbackReturn = '/host?calendar=error';
+  const fallbackReturn = '/host';
   const payload = state ? verifyOAuthState(state) : null;
   const returnPath = payload?.returnPath || fallbackReturn;
   const base = getFrontendUrl();
 
   if (oauthError) {
-    res.redirect(`${base}${returnPath}${returnPath.includes('?') ? '&' : '?'}reason=${oauthError}`);
+    redirectWithCalendarResult(res, base, returnPath, 'error', oauthError);
     return;
   }
 
   if (!code || !payload) {
-    res.redirect(`${base}${returnPath}${returnPath.includes('?') ? '&' : '?'}reason=invalid_state`);
+    redirectWithCalendarResult(res, base, returnPath, 'error', 'invalid_state');
     return;
   }
 
@@ -90,10 +113,10 @@ export async function handleGoogleCalendarCallback(
       accessTokenExpiresAt: tokens.accessTokenExpiresAt,
       googleEmail: tokens.googleEmail,
     });
-    res.redirect(`${base}${returnPath}`);
+    redirectWithCalendarResult(res, base, returnPath, 'connected');
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'oauth_failed';
-    res.redirect(`${base}${returnPath}${returnPath.includes('?') ? '&' : '?'}reason=${reason}`);
+    redirectWithCalendarResult(res, base, returnPath, 'error', reason);
   }
 }
 

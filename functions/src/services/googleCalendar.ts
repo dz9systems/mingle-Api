@@ -16,6 +16,7 @@ import type {
 import { computeEventWindow, toGoogleCalendarDateTime } from '../utils/eventDateTime';
 
 const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+const EMAIL_SCOPE = 'https://www.googleapis.com/auth/userinfo.email';
 
 function integrationRef(uid: string) {
   return admin.firestore().doc(`hostIntegrations/${uid}`);
@@ -41,7 +42,7 @@ export function buildGoogleAuthUrl(state: string): string {
   const client = createOAuthClient();
   return client.generateAuthUrl({
     access_type: 'offline',
-    scope: [CALENDAR_SCOPE],
+    scope: [CALENDAR_SCOPE, EMAIL_SCOPE],
     prompt: 'consent',
     state,
   });
@@ -61,14 +62,20 @@ export async function exchangeCodeForTokens(code: string): Promise<{
   }
 
   client.setCredentials(tokens);
-  const oauth2 = google.oauth2({ version: 'v2', auth: client });
-  const profile = await oauth2.userinfo.get();
+  let googleEmail: string | undefined;
+  try {
+    const oauth2 = google.oauth2({ version: 'v2', auth: client });
+    const profile = await oauth2.userinfo.get();
+    googleEmail = profile.data.email || undefined;
+  } catch {
+    // Email is optional; refresh token is enough for calendar sync.
+  }
 
   return {
     refreshToken: tokens.refresh_token,
     accessToken: tokens.access_token || undefined,
     accessTokenExpiresAt: tokens.expiry_date || undefined,
-    googleEmail: profile.data.email || undefined,
+    googleEmail,
   };
 }
 

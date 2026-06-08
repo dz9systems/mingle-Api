@@ -163,6 +163,14 @@ export function getGoogleClientSecret(): string {
 }
 
 export function getGoogleOAuthRedirectUri(): string {
+  if (process.env.FUNCTIONS_EMULATOR === 'true') {
+    if (process.env.GOOGLE_OAUTH_LOCAL_REDIRECT_URI) {
+      return process.env.GOOGLE_OAUTH_LOCAL_REDIRECT_URI;
+    }
+
+    return `${getFrontendUrl()}/api/integrations/google/calendar/callback`;
+  }
+
   return (
     process.env.GOOGLE_OAUTH_REDIRECT_URI ||
     configValue('google', 'oauth_redirect_uri') ||
