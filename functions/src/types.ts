@@ -8,6 +8,7 @@ export type BulkSendEvent = {
   slug: string;
   name: string;
   hostName?: string;
+  hosts?: Array<{ name: string }>;
   date?: string;
   time?: string;
   location?: string;

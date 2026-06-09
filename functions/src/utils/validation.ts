@@ -55,6 +55,11 @@ export function validateBulkSendRequest(
         slug: eventData.slug,
         name: eventData.name,
         hostName: eventData.hostName,
+        hosts: Array.isArray((event as { hosts?: unknown }).hosts)
+          ? (event as { hosts: Array<{ name?: string }> }).hosts
+              .map((h) => ({ name: String(h?.name || '').trim() }))
+              .filter((h) => h.name)
+          : undefined,
         date: eventData.date,
         time: eventData.time,
         location: eventData.location,
