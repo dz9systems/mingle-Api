@@ -49,6 +49,7 @@ export async function sendEmailToRecipient(params: {
     };
   }
 
+  const hasCustomMessage = !!customMessage?.trim();
   const bodyText = resolveMessageBody({
     event,
     channel: 'email',
@@ -61,6 +62,7 @@ export async function sendEmailToRecipient(params: {
     event,
     recipientName: recipient.name,
     bodyText,
+    skipGreeting: hasCustomMessage,
   });
 
   try {

@@ -11,7 +11,12 @@ import {
 import { handleSendEmail } from './handlers/sendEmail';
 import { handleSendSms } from './handlers/sendSms';
 import { handleSpotifySearch } from './handlers/spotifySearch';
+import { handleRenderEvent } from './handlers/renderEvent';
 import { handleUploadGuestAvatar } from './handlers/uploadGuestAvatar';
+import {
+  handleImportGuests,
+  handleSyncRsvpsToInvitees,
+} from './handlers/importGuests';
 import { resetStaleRateLimitBuckets } from './utils/rateLimit';
 
 admin.initializeApp();
@@ -48,6 +53,19 @@ export const googleCalendarSync = onRequest(runtimeOptions, handleGoogleCalendar
 
 export const spotifySearch = onRequest(runtimeOptions, handleSpotifySearch);
 export const uploadGuestAvatar = onRequest(runtimeOptions, handleUploadGuestAvatar);
+export const importGuests = onRequest(runtimeOptions, handleImportGuests);
+export const syncRsvpsToInvitees = onRequest(runtimeOptions, handleSyncRsvpsToInvitees);
+
+export const renderEvent = onRequest(
+  {
+    region: 'us-central1',
+    cors: false,
+    maxInstances: 10,
+    timeoutSeconds: 30,
+    memory: '256MiB' as const,
+  },
+  handleRenderEvent
+);
 
 export const resetRateLimits = onSchedule(
   {

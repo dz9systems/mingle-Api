@@ -42,6 +42,14 @@
         "function": "uploadGuestAvatar"
       },
       {
+        "source": "/api/import/guests",
+        "function": "importGuests"
+      },
+      {
+        "source": "/api/import/sync-rsvps",
+        "function": "syncRsvpsToInvitees"
+      },
+      {
         "source": "/api/integrations/google/calendar/connect",
         "function": "googleCalendarConnect"
       },
@@ -60,6 +68,10 @@
       {
         "source": "/api/integrations/google/calendar/sync",
         "function": "googleCalendarSync"
+      },
+      {
+        "source": "/e/**",
+        "function": "renderEvent"
       }
     ]
   },

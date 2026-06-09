@@ -33,8 +33,9 @@ export async function isHostOfEvent(uid: string, slug: string): Promise<boolean>
     return false;
   }
 
-  const hostIds: string[] = eventSnap.data()?.hostIds || [];
-  return hostIds.includes(uid);
+  const data = eventSnap.data();
+  const hostIds: string[] = data?.hostIds || [];
+  return hostIds.includes(uid) || data?.hostId === uid;
 }
 
 export async function verifyHostAuthForSlug(
@@ -58,8 +59,9 @@ export async function verifyHostAuthForSlug(
     return null;
   }
 
-  const hostIds: string[] = eventSnap.data()?.hostIds || [];
-  if (!hostIds.includes(auth.uid)) {
+  const data = eventSnap.data();
+  const hostIds: string[] = data?.hostIds || [];
+  if (!hostIds.includes(auth.uid) && data?.hostId !== auth.uid) {
     res.status(403).send('forbidden');
     return null;
   }
@@ -108,8 +110,9 @@ export async function verifyHostAuth(
     return null;
   }
 
-  const hostIds: string[] = eventSnap.data()?.hostIds || [];
-  if (!hostIds.includes(decoded.uid)) {
+  const data = eventSnap.data();
+  const hostIds: string[] = data?.hostIds || [];
+  if (!hostIds.includes(decoded.uid) && data?.hostId !== decoded.uid) {
     res.status(403).send('forbidden');
     return null;
   }

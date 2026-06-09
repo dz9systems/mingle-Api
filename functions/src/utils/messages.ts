@@ -1,4 +1,5 @@
 import type { BulkSendEvent } from '../types';
+import { mergeMessageTemplate } from './messageMerge';
 
 type MessageParams = {
   event: BulkSendEvent;
@@ -68,13 +69,26 @@ export function defaultInviteMessage(params: MessageParams): string {
   return lines.join('\n');
 }
 
+function mergeContextFromParams(params: MessageParams) {
+  return {
+    name: params.recipientName,
+    eventName: params.event.name,
+    hostName: params.event.hostName,
+    date: params.event.date,
+    time: params.event.time,
+    location: params.event.location,
+    rsvpLink: params.event.inviteUrl,
+  };
+}
+
 export function resolveMessageBody(params: MessageParams): string {
   const trimmed = params.customMessage?.trim();
   if (trimmed) {
+    const merged = mergeMessageTemplate(trimmed, mergeContextFromParams(params));
     if (params.channel === 'sms') {
-      return appendRsvpLinkIfMissing(trimmed, params.event.inviteUrl);
+      return appendRsvpLinkIfMissing(merged, params.event.inviteUrl);
     }
-    return trimmed;
+    return merged;
   }
   return defaultInviteMessage(params);
 }
@@ -83,18 +97,23 @@ export function buildEmailHtml(params: {
   event: BulkSendEvent;
   recipientName: string;
   bodyText: string;
+  skipGreeting?: boolean;
 }): string {
-  const { event, recipientName, bodyText } = params;
+  const { event, recipientName, bodyText, skipGreeting } = params;
   const paragraphs = bodyText
     .split('\n')
     .filter((line) => line.trim().length > 0)
     .map((line) => `<p style="margin:0 0 12px;line-height:1.5;">${escapeHtml(line)}</p>`)
     .join('');
 
+  const greetingBlock = skipGreeting
+    ? ''
+    : `<p style="margin:0 0 16px;">Hi ${escapeHtml(recipientName)},</p>`;
+
   return `<!DOCTYPE html>
 <html>
   <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;max-width:560px;margin:0 auto;padding:24px;">
-    <p style="margin:0 0 16px;">Hi ${escapeHtml(recipientName)},</p>
+    ${greetingBlock}
     ${paragraphs}
     <p style="margin:24px 0;">
       <a href="${escapeHtml(event.inviteUrl)}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600;">
