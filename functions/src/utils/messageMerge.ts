@@ -21,6 +21,21 @@ export const MESSAGE_MERGE_FIELDS = [
   '{rsvpLink}',
 ] as const;
 
+/** "June, 06, 2026" from YYYY-MM-DD (local calendar date). */
+export function formatMessageDate(dateStr?: string): string {
+  if (!dateStr?.trim()) return '';
+  const parts = dateStr.trim().split('-').map((part) => parseInt(part, 10));
+  if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) {
+    return dateStr.trim();
+  }
+
+  const [year, month, day] = parts;
+  const date = new Date(year, month - 1, day);
+  const monthName = date.toLocaleDateString('en-US', { month: 'long' });
+  const dayPadded = day.toString().padStart(2, '0');
+  return `${monthName}, ${dayPadded}, ${year}`;
+}
+
 /** "Isaiah", "Isaiah and Louis", or "Isaiah, Louis, and Marie" from host entries. */
 export function formatHostNames(
   hosts: Array<{ name?: string }> | undefined,
@@ -51,7 +66,7 @@ export function mergeMessageTemplate(
     eventName: ctx.eventName?.trim() || 'the event',
     hostName: ctx.hostName?.trim() || ctx.hostNames?.trim() || 'your host',
     hostNames: ctx.hostNames?.trim() || ctx.hostName?.trim() || 'your hosts',
-    date: ctx.date?.trim() || '',
+    date: formatMessageDate(ctx.date) || '',
     time: ctx.time?.trim() || '',
     location: ctx.location?.trim() || '',
     rsvpLink: ctx.rsvpLink?.trim() || '',

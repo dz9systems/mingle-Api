@@ -1,5 +1,5 @@
 import type { BulkSendEvent } from '../types';
-import { formatHostNames, mergeMessageTemplate } from './messageMerge';
+import { formatHostNames, formatMessageDate, mergeMessageTemplate } from './messageMerge';
 
 type MessageParams = {
   event: BulkSendEvent;
@@ -10,7 +10,7 @@ type MessageParams = {
 
 function formatSmsEventDetails(event: BulkSendEvent): string {
   const whenParts: string[] = [];
-  if (event.date?.trim()) whenParts.push(event.date.trim());
+  if (event.date?.trim()) whenParts.push(formatMessageDate(event.date));
   if (event.time?.trim()) whenParts.push(event.time.trim());
 
   const when = whenParts.join(', ');
@@ -55,7 +55,7 @@ export function defaultInviteMessage(params: MessageParams): string {
 
   if (event.date || event.time) {
     lines.push(
-      `${event.date || ''}${event.date && event.time ? ' · ' : ''}${event.time || ''}`.trim()
+      `${formatMessageDate(event.date) || ''}${event.date && event.time ? ' · ' : ''}${event.time || ''}`.trim()
     );
   }
 
