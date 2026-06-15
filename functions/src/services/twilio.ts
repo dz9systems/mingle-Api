@@ -104,7 +104,9 @@ export async function sendSmsToRecipient(params: {
       eventSlug: event.slug,
       recipientPhone: to,
       recipientName: recipient.name,
+      body,
       success,
+      twilioSid: message.sid,
       ...(success ? {} : { error: message.status }),
     });
 
@@ -121,6 +123,7 @@ export async function sendSmsToRecipient(params: {
       eventSlug: event.slug,
       recipientPhone: to,
       recipientName: recipient.name,
+      body,
       success: false,
       error: message,
     });

@@ -80,7 +80,7 @@ export function getResendFromEmail(): string {
   return (
     process.env.RESEND_FROM_EMAIL ||
     configValue('resend', 'from_email') ||
-    'Mingle <invites@mail.mingle.app>'
+    'Mingle <invites@mail.themingleapp.com>'
   );
 }
 

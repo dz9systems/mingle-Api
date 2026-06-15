@@ -1,7 +1,9 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isSignedIn() { return request.auth != null; }
+    function isSignedIn() {
+      return request.auth != null;
+    }
     function isHostOf(eventDoc) {
       return isSignedIn()
         && eventDoc != null
@@ -11,8 +13,19 @@ service cloud.firestore {
             && eventDoc.data.hostIds.hasAny([request.auth.uid]))
         );
     }
+    function isPublishedStatus(data) {
+      return data != null && (!('status' in data) || data.status == 'published');
+    }
+    function eventDoc(eventId) {
+      return get(/databases/$(database)/documents/events/$(eventId));
+    }
+    function isPublishedEvent(eventId) {
+      return isPublishedStatus(eventDoc(eventId).data);
+    }
+    function canReadEvent(eventId) {
+      return isPublishedEvent(eventId) || isHostOf(eventDoc(eventId));
+    }
 
-    // Allow a signed-in user to add themselves as co-host via a valid invite link.
     function isJoiningAsCohost() {
       return isSignedIn()
         && resource.data.cohostToken is string
@@ -27,47 +40,80 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hostIds', 'hosts']);
     }
 
-    match /events/{slug} {
-      allow read: if true;
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
 
-      allow create: if isSignedIn()
-                     && request.resource.data.hostId == request.auth.uid
-                     && request.auth.uid in request.resource.data.hostIds;
-
-      allow update: if isHostOf(resource) || isJoiningAsCohost();
-      allow delete: if isHostOf(resource);
-
-      match /rsvps/{uid} {
-        allow read: if true;
-        allow write: if (isSignedIn() && request.auth.uid == uid)
-                      || uid.matches('^guest-.+');
+      match /hostedEvents/{slug} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
       }
 
-      // Potluck uses a `claims` array (not legacy `claimedBy`). Guests are not
-      // Firebase-authenticated, so claim/unclaim updates must be open like songs.
-      match /potluck/{itemId} {
-        allow read: if true;
-        allow create, update: if true;
-        allow delete: if isHostOf(get(/databases/$(database)/documents/events/$(slug)));
-      }
-
-      match /songs/{songId} {
-        allow read: if true;
-        allow create, update: if true;
-        allow delete: if isHostOf(get(/databases/$(database)/documents/events/$(slug)));
-      }
-
-      match /teamAssignments/{uid} {
-        allow read: if true;
-        allow write: if (isSignedIn() && request.auth.uid == uid)
-                      || uid.matches('^guest-.+');
+      match /eventMemberships/{slug} {
+        allow read, delete: if request.auth != null && request.auth.uid == userId;
       }
     }
 
-    match /smsLog/{logId}     { allow read, write: if false; }
-    match /emailLog/{logId}   { allow read, write: if false; }
-    match /rateLimits/{uid}   { allow read, write: if false; }
+    match /eventBackups/{slug} {
+      allow read: if request.auth != null && resource.data.deletedBy == request.auth.uid;
+      allow create: if request.auth != null
+        && request.resource.data.deletedBy == request.auth.uid
+        && request.resource.data.slug == slug;
+      allow delete: if request.auth != null && resource.data.deletedBy == request.auth.uid;
+      allow update: if false;
+
+      match /{subcollection}/{docId} {
+        allow read, create, delete: if request.auth != null
+          && get(/databases/$(database)/documents/eventBackups/$(slug)).data.deletedBy == request.auth.uid;
+        allow update: if false;
+      }
+    }
+
+    match /events/{eventId} {
+      allow read: if isPublishedStatus(resource.data) || isHostOf(resource);
+      allow create: if request.auth != null
+        && request.resource.data.hostId == request.auth.uid
+        && (!('status' in request.resource.data) || request.resource.data.status in ['draft', 'published']);
+      allow update: if isHostOf(resource) || isJoiningAsCohost();
+      allow delete: if isSignedIn() && resource.data.hostId == request.auth.uid;
+
+      match /rsvps/{uid} {
+        allow read: if canReadEvent(eventId);
+        allow create, update: if isPublishedEvent(eventId)
+          && ((isSignedIn() && request.auth.uid == uid) || uid.matches('^guest-.+'));
+        allow delete: if (isSignedIn() && request.auth.uid == uid)
+                      || uid.matches('^guest-.+')
+                      || isHostOf(eventDoc(eventId));
+      }
+
+      match /potluck/{itemId} {
+        allow read: if canReadEvent(eventId);
+        allow create, update: if isHostOf(eventDoc(eventId)) || isPublishedEvent(eventId);
+        allow delete: if isHostOf(eventDoc(eventId));
+      }
+
+      match /songs/{songId} {
+        allow read: if canReadEvent(eventId);
+        allow create, update: if isHostOf(eventDoc(eventId)) || isPublishedEvent(eventId);
+        allow delete: if isHostOf(eventDoc(eventId));
+      }
+
+      match /teamAssignments/{uid} {
+        allow read: if canReadEvent(eventId);
+        allow create, update: if isPublishedEvent(eventId)
+          && ((isSignedIn() && request.auth.uid == uid) || uid.matches('^guest-.+'));
+        allow delete: if (isSignedIn() && request.auth.uid == uid)
+                      || uid.matches('^guest-.+')
+                      || isHostOf(eventDoc(eventId));
+      }
+
+      // Host-readable send history for the communication UI. Writes are backend-only.
+      match /messageLog/{logId} {
+        allow read: if isHostOf(eventDoc(eventId));
+        allow write: if false;
+      }
+    }
+
+    match /rateLimits/{uid}         { allow read, write: if false; }
     match /hostIntegrations/{uid} { allow read, write: if false; }
-    match /calendarEvents/{slug}  { allow read, write: if false; }
+    match /calendarEvents/{slug}    { allow read, write: if false; }
   }
 }

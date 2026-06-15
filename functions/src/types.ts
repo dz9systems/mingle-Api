@@ -37,6 +37,27 @@ export type Invitee = {
   lastSentAt?: number;
   sendCount?: number;
   lastSentChannel?: 'email' | 'sms';
+  emailSentAt?: number;
+  smsSentAt?: number;
+};
+
+export type MessageChannel = 'email' | 'sms';
+
+export type MessageLogSource = 'api' | 'migration';
+
+export type MessageLogEntry = {
+  channel: MessageChannel;
+  hostUid: string;
+  recipientName: string;
+  body: string;
+  recipientEmail?: string;
+  recipientPhone?: string;
+  success: boolean;
+  error?: string;
+  createdAt: number;
+  twilioSid?: string;
+  resendId?: string;
+  source: MessageLogSource;
 };
 
 export type SendOutcome = {
