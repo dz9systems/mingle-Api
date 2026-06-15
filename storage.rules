@@ -11,18 +11,27 @@ service firebase.storage {
           && (
             request.auth.uid == eventDoc(slug).data.hostId
             || (
-              eventDoc(slug).data.keys().hasAll(['hostIds'])
+              'hostIds' in eventDoc(slug).data
               && eventDoc(slug).data.hostIds.hasAny([request.auth.uid])
             )
           );
+    }
+
+    function isValidImageUpload() {
+      return request.resource.size < 5 * 1024 * 1024
+          && request.resource.contentType.matches('image/.*');
     }
 
     match /events/{slug}/{fileName} {
       allow read: if fileName.matches('cover\\..+');
       allow write: if fileName.matches('cover\\..+')
                   && isEventHost(slug)
-                  && request.resource.size < 5 * 1024 * 1024
-                  && request.resource.contentType.matches('image/.*');
+                  && isValidImageUpload();
+    }
+
+    match /events/{slug}/venue/{fileName} {
+      allow read: if true;
+      allow write: if isEventHost(slug) && isValidImageUpload();
     }
 
     // Guest profile photos — written via Cloud Functions (admin SDK), public read.

@@ -18,6 +18,7 @@ import {
   handleSyncRsvpsToInvitees,
 } from './handlers/importGuests';
 import { resetStaleRateLimitBuckets } from './utils/rateLimit';
+import { purgeExpiredEventBackups } from './services/eventBackups';
 
 admin.initializeApp();
 admin.firestore().settings({ ignoreUndefinedProperties: true });
@@ -76,5 +77,17 @@ export const resetRateLimits = onSchedule(
   async () => {
     const resetCount = await resetStaleRateLimitBuckets();
     console.info(`resetRateLimits: normalized ${resetCount} bucket(s)`);
+  }
+);
+
+export const purgeEventBackups = onSchedule(
+  {
+    schedule: 'every 24 hours',
+    region: 'us-central1',
+    timeZone: 'America/Los_Angeles',
+  },
+  async () => {
+    const purgedCount = await purgeExpiredEventBackups();
+    console.info(`purgeEventBackups: removed ${purgedCount} expired backup(s)`);
   }
 );

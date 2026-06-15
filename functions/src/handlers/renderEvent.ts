@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { getFrontendUrl } from '../config';
 import { getEventBySlug } from '../services/events';
+import { isEventPublished } from '../utils/eventStatus';
 import {
   buildEventOgMeta,
   buildFallbackOgMeta,
@@ -71,7 +72,7 @@ export async function handleRenderEvent(req: Request, res: Response): Promise<vo
       fetchSpaShell(frontendUrl),
     ]);
 
-    const meta: OgMeta = event
+    const meta: OgMeta = event && isEventPublished(event)
       ? buildEventOgMeta(event, canonicalUrl)
       : buildFallbackOgMeta(canonicalUrl, frontendUrl);
 
