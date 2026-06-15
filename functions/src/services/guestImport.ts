@@ -109,6 +109,8 @@ function sanitizeInvitees(invitees: Invitee[]): Invitee[] {
     if (inv.lastSentAt !== undefined) row.lastSentAt = inv.lastSentAt;
     if (inv.sendCount !== undefined) row.sendCount = inv.sendCount;
     if (inv.lastSentChannel) row.lastSentChannel = inv.lastSentChannel;
+    if (inv.emailSentAt !== undefined) row.emailSentAt = inv.emailSentAt;
+    if (inv.smsSentAt !== undefined) row.smsSentAt = inv.smsSentAt;
     return row;
   });
 }

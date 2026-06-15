@@ -1,7 +1,9 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isSignedIn() { return request.auth != null; }
+    function isSignedIn() {
+      return request.auth != null;
+    }
     function isHostOf(eventDoc) {
       return isSignedIn()
         && eventDoc != null
@@ -24,7 +26,6 @@ service cloud.firestore {
       return isPublishedEvent(slug) || isHostOf(eventDoc(slug));
     }
 
-    // Allow a signed-in user to add themselves as co-host via a valid invite link.
     function isJoiningAsCohost() {
       return isSignedIn()
         && resource.data.cohostToken is string
@@ -53,35 +54,37 @@ service cloud.firestore {
       match /rsvps/{uid} {
         allow read: if canReadEvent(slug);
         allow create, update: if isPublishedEvent(slug)
-                      && ((isSignedIn() && request.auth.uid == uid)
-                      || uid.matches('^guest-.+'));
+          && ((isSignedIn() && request.auth.uid == uid) || uid.matches('^guest-.+'));
         allow delete: if (isSignedIn() && request.auth.uid == uid)
                       || uid.matches('^guest-.+')
-                      || isHostOf(get(/databases/$(database)/documents/events/$(slug)));
+                      || isHostOf(eventDoc(slug));
       }
 
       match /potluck/{itemId} {
         allow read: if canReadEvent(slug);
-        allow create, update: if isHostOf(get(/databases/$(database)/documents/events/$(slug)))
-                              || isPublishedEvent(slug);
-        allow delete: if isHostOf(get(/databases/$(database)/documents/events/$(slug)));
+        allow create, update: if isHostOf(eventDoc(slug)) || isPublishedEvent(slug);
+        allow delete: if isHostOf(eventDoc(slug));
       }
 
       match /songs/{songId} {
         allow read: if canReadEvent(slug);
-        allow create, update: if isHostOf(get(/databases/$(database)/documents/events/$(slug)))
-                              || isPublishedEvent(slug);
-        allow delete: if isHostOf(get(/databases/$(database)/documents/events/$(slug)));
+        allow create, update: if isHostOf(eventDoc(slug)) || isPublishedEvent(slug);
+        allow delete: if isHostOf(eventDoc(slug));
       }
 
       match /teamAssignments/{uid} {
         allow read: if canReadEvent(slug);
         allow create, update: if isPublishedEvent(slug)
-                      && ((isSignedIn() && request.auth.uid == uid)
-                      || uid.matches('^guest-.+'));
+          && ((isSignedIn() && request.auth.uid == uid) || uid.matches('^guest-.+'));
         allow delete: if (isSignedIn() && request.auth.uid == uid)
                       || uid.matches('^guest-.+')
-                      || isHostOf(get(/databases/$(database)/documents/events/$(slug)));
+                      || isHostOf(eventDoc(slug));
+      }
+
+      // Host-readable send history for the communication UI. Writes are backend-only.
+      match /messageLog/{logId} {
+        allow read: if isHostOf(eventDoc(slug));
+        allow write: if false;
       }
     }
 
@@ -113,10 +116,8 @@ service cloud.firestore {
       }
     }
 
-    match /smsLog/{logId}     { allow read, write: if false; }
-    match /emailLog/{logId}   { allow read, write: if false; }
-    match /rateLimits/{uid}   { allow read, write: if false; }
+    match /rateLimits/{uid}         { allow read, write: if false; }
     match /hostIntegrations/{uid} { allow read, write: if false; }
-    match /calendarEvents/{slug}  { allow read, write: if false; }
+    match /calendarEvents/{slug}    { allow read, write: if false; }
   }
 }

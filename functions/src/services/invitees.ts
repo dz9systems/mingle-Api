@@ -1,5 +1,6 @@
 import * as admin from 'firebase-admin';
 import type { Invitee, SendOutcome } from '../types';
+import { logOutboundMessage } from './messageLog';
 import { digitsOnlyPhone, normalizeEmail } from '../utils/validation';
 
 export async function updateInviteeTracking(
@@ -38,6 +39,7 @@ export async function updateInviteeTracking(
         lastSentAt: now,
         sendCount: (existing.sendCount || 0) + 1,
         lastSentChannel: channel,
+        ...(channel === 'email' ? { emailSentAt: now } : { smsSentAt: now }),
       };
     }
 
@@ -72,17 +74,21 @@ export async function logEmailSend(params: {
   eventSlug: string;
   recipientEmail: string;
   recipientName: string;
+  body: string;
   success: boolean;
   error?: string;
+  resendId?: string;
 }): Promise<void> {
-  await admin.firestore().collection('emailLog').add({
+  await logOutboundMessage({
+    channel: 'email',
     hostUid: params.hostUid,
     eventSlug: params.eventSlug,
     recipientEmail: params.recipientEmail,
     recipientName: params.recipientName,
+    body: params.body,
     success: params.success,
     ...(params.error !== undefined ? { error: params.error } : {}),
-    createdAt: Date.now(),
+    ...(params.resendId !== undefined ? { resendId: params.resendId } : {}),
   });
 }
 
@@ -91,16 +97,24 @@ export async function logSmsSend(params: {
   eventSlug: string;
   recipientPhone: string;
   recipientName: string;
+  body: string;
   success: boolean;
   error?: string;
+  twilioSid?: string;
+  createdAt?: number;
+  source?: 'api' | 'migration';
 }): Promise<void> {
-  await admin.firestore().collection('smsLog').add({
+  await logOutboundMessage({
+    channel: 'sms',
     hostUid: params.hostUid,
     eventSlug: params.eventSlug,
     recipientPhone: params.recipientPhone,
     recipientName: params.recipientName,
+    body: params.body,
     success: params.success,
     ...(params.error !== undefined ? { error: params.error } : {}),
-    createdAt: Date.now(),
+    ...(params.twilioSid !== undefined ? { twilioSid: params.twilioSid } : {}),
+    ...(params.createdAt !== undefined ? { createdAt: params.createdAt } : {}),
+    ...(params.source !== undefined ? { source: params.source } : {}),
   });
 }

@@ -82,8 +82,10 @@ export async function sendEmailToRecipient(params: {
       eventSlug: event.slug,
       recipientEmail: email,
       recipientName: recipient.name,
+      body: bodyText,
       success,
       error: result.error?.message,
+      resendId: result.data?.id,
     });
 
     return {
@@ -98,6 +100,7 @@ export async function sendEmailToRecipient(params: {
       eventSlug: event.slug,
       recipientEmail: email,
       recipientName: recipient.name,
+      body: bodyText,
       success: false,
       error: message,
     });
