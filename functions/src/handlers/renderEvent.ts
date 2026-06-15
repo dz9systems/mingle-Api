@@ -9,7 +9,11 @@ import {
   type OgMeta,
 } from '../utils/ogMeta';
 
-const SHELL_TTL_MS = 5 * 60 * 1000;
+/** How long a validated shell may be reused before re-fetching index.html. */
+const SHELL_TTL_MS = 60 * 1000;
+
+/** Max age for serving a cached shell when the network fetch fails. */
+const STALE_FALLBACK_MAX_MS = 5 * 60 * 1000;
 
 let cachedShell: { html: string; fetchedAt: number } | null = null;
 
@@ -24,27 +28,74 @@ function buildCanonicalUrl(req: Request, frontendUrl: string): string {
   return `${frontendUrl}${path}${query}`;
 }
 
+function extractModuleScriptSrc(html: string): string | null {
+  const match =
+    html.match(/<script[^>]*type=["']module["'][^>]*src=["']([^"']+)["']/i) ||
+    html.match(/<script[^>]*src=["']([^"']+)["'][^>]*type=["']module["']/i);
+  return match?.[1] ?? null;
+}
+
+function resolveAssetUrl(frontendUrl: string, scriptSrc: string): string {
+  if (scriptSrc.startsWith('http://') || scriptSrc.startsWith('https://')) {
+    return scriptSrc;
+  }
+  return `${frontendUrl}${scriptSrc.startsWith('/') ? scriptSrc : `/${scriptSrc}`}`;
+}
+
+async function isScriptBundleLive(frontendUrl: string, html: string): Promise<boolean> {
+  const scriptSrc = extractModuleScriptSrc(html);
+  if (!scriptSrc) return false;
+
+  try {
+    const response = await fetch(resolveAssetUrl(frontendUrl, scriptSrc), {
+      method: 'HEAD',
+      cache: 'no-store',
+    });
+    if (!response.ok) return false;
+
+    const contentType = response.headers.get('content-type') || '';
+    return contentType.includes('javascript') || contentType.includes('ecmascript');
+  } catch {
+    return false;
+  }
+}
+
+async function fetchSpaShellFromNetwork(frontendUrl: string): Promise<string> {
+  const response = await fetch(`${frontendUrl}/index.html`, {
+    headers: { Accept: 'text/html' },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error(`spa_shell_status_${response.status}`);
+  }
+
+  const html = await response.text();
+  if (!(await isScriptBundleLive(frontendUrl, html))) {
+    throw new Error('spa_shell_invalid_script');
+  }
+
+  return html;
+}
+
 async function fetchSpaShell(frontendUrl: string): Promise<string> {
   const now = Date.now();
+
   if (cachedShell && now - cachedShell.fetchedAt < SHELL_TTL_MS) {
-    return cachedShell.html;
+    if (await isScriptBundleLive(frontendUrl, cachedShell.html)) {
+      return cachedShell.html;
+    }
+    console.warn('renderEvent: cached SPA shell has stale asset hash, refetching');
+    cachedShell = null;
   }
 
   try {
-    const response = await fetch(`${frontendUrl}/index.html`, {
-      headers: { Accept: 'text/html' },
-    });
-
-    if (!response.ok) {
-      throw new Error(`spa_shell_status_${response.status}`);
-    }
-
-    const html = await response.text();
+    const html = await fetchSpaShellFromNetwork(frontendUrl);
     cachedShell = { html, fetchedAt: now };
     return html;
   } catch (error) {
-    if (cachedShell) {
-      console.warn('renderEvent: using stale SPA shell cache', error);
+    if (cachedShell && now - cachedShell.fetchedAt < STALE_FALLBACK_MAX_MS) {
+      console.warn('renderEvent: using stale SPA shell cache after fetch failure', error);
       return cachedShell.html;
     }
     throw error;
