@@ -64,6 +64,14 @@ service cloud.firestore {
       }
     }
 
+    match /users/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+
+      match /eventMemberships/{slug} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+    }
+
     match /smsLog/{logId}     { allow read, write: if false; }
     match /emailLog/{logId}   { allow read, write: if false; }
     match /rateLimits/{uid}   { allow read, write: if false; }
