@@ -11,6 +11,8 @@ export type EventRecord = {
   endTime?: string;
   location?: string;
   coverImage?: string;
+  status?: string;
+  publishedAt?: number;
 };
 
 export async function getEventBySlug(slug: string): Promise<EventRecord | null> {
