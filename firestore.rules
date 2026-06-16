@@ -75,7 +75,11 @@ service cloud.firestore {
       match /teamAssignments/{uid} {
         allow read: if canReadEvent(slug);
         allow create, update: if isPublishedEvent(slug)
-          && ((isSignedIn() && request.auth.uid == uid) || uid.matches('^guest-.+'));
+          && (
+            (isSignedIn() && request.auth.uid == uid)
+            || uid.matches('^guest-.+')
+            || isHostOf(eventDoc(slug))
+          );
         allow delete: if (isSignedIn() && request.auth.uid == uid)
                       || uid.matches('^guest-.+')
                       || isHostOf(eventDoc(slug));

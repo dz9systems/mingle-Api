@@ -6,9 +6,8 @@ import {
   getTwilioFromNumber,
   getTwilioMessagingServiceSid,
 } from '../config';
-import type { BulkRecipient, BulkSendEvent, SendOutcome } from '../types';
+import type { BulkRecipient, BulkSendEvent, MessageLogEntry, SendOutcome } from '../types';
 import { resolveMessageBody } from '../utils/messages';
-import { logSmsSend } from './invitees';
 
 let twilioClient: ReturnType<typeof twilio> | null = null;
 
@@ -47,13 +46,19 @@ export function normalizeToE164(phone: string, defaultCountry = 'US'): string | 
   return parsed.format('E.164');
 }
 
+type TwilioCreateParams =
+  | { to: string; from: string; body: string; mediaUrl?: string[] }
+  | { to: string; messagingServiceSid: string; body: string; mediaUrl?: string[] };
+
 export async function sendSmsToRecipient(params: {
   recipient: BulkRecipient;
   event: BulkSendEvent;
   customMessage?: string;
   hostUid: string;
+  mediaUrl?: string;
+  mmsRequested?: boolean;
 }): Promise<SendOutcome> {
-  const { recipient, event, customMessage, hostUid } = params;
+  const { recipient, event, customMessage, hostUid, mediaUrl, mmsRequested } = params;
   const rawPhone = recipient.phone?.trim();
 
   if (!rawPhone) {
@@ -61,6 +66,7 @@ export async function sendSmsToRecipient(params: {
       recipient,
       success: false,
       error: 'missing_phone',
+      mmsRequested,
     };
   }
 
@@ -70,6 +76,7 @@ export async function sendSmsToRecipient(params: {
       recipient,
       success: false,
       error: 'invalid_phone',
+      mmsRequested,
     };
   }
 
@@ -88,50 +95,130 @@ export async function sendSmsToRecipient(params: {
     customMessage,
   });
 
-  const sendParams = fromNumber
+  const buildLogEntry = (result: {
+    success: boolean;
+    twilioSid?: string;
+    error?: string;
+  }): MessageLogEntry => ({
+    channel: 'sms',
+    hostUid,
+    recipientPhone: to,
+    recipientName: recipient.name,
+    body,
+    success: result.success,
+    createdAt: Date.now(),
+    source: 'api',
+    ...(result.error !== undefined ? { error: result.error } : {}),
+    ...(result.twilioSid !== undefined ? { twilioSid: result.twilioSid } : {}),
+  });
+
+  const baseParams: TwilioCreateParams = fromNumber
     ? { to, from: fromNumber, body }
     : { to, messagingServiceSid, body };
 
-  try {
-    const message = await getTwilio().messages.create(sendParams);
+  const withMedia: TwilioCreateParams =
+    mediaUrl && mediaUrl.startsWith('https://')
+      ? { ...baseParams, mediaUrl: [mediaUrl] }
+      : baseParams;
 
+  const deliver = async (
+    createParams: TwilioCreateParams
+  ): Promise<{
+    success: boolean;
+    sid?: string;
+    status?: string;
+    error?: string;
+    mmsAttached?: boolean;
+  }> => {
+    const message = await getTwilio().messages.create(createParams);
+    const mmsAttached =
+      'mediaUrl' in createParams && createParams.mediaUrl
+        ? Number(message.numMedia || 0) > 0
+        : false;
     const success = ['queued', 'accepted', 'sending', 'sent', 'delivered'].includes(
       message.status
     );
-
-    await logSmsSend({
-      hostUid,
-      eventSlug: event.slug,
-      recipientPhone: to,
-      recipientName: recipient.name,
-      body,
+    return {
       success,
-      twilioSid: message.sid,
-      ...(success ? {} : { error: message.status }),
-    });
+      sid: message.sid,
+      mmsAttached,
+      ...(success ? {} : { status: message.status, error: message.status }),
+    };
+  };
+
+  try {
+    let result =
+      mmsRequested && 'mediaUrl' in withMedia
+        ? await deliver(withMedia)
+        : await deliver(baseParams);
+
+    if (
+      mmsRequested &&
+      'mediaUrl' in withMedia &&
+      result.success &&
+      !result.mmsAttached
+    ) {
+      console.warn('Twilio accepted MMS without media; retrying SMS-only:', { to });
+      result = await deliver(baseParams);
+      result.mmsAttached = false;
+    } else if (
+      mmsRequested &&
+      'mediaUrl' in withMedia &&
+      !result.success
+    ) {
+      console.warn('Twilio MMS failed; retrying SMS-only:', {
+        to,
+        error: result.error || result.status,
+      });
+      result = await deliver(baseParams);
+      result.mmsAttached = false;
+    }
 
     return {
       recipient: { ...recipient, phone: to },
-      success,
-      ...(success ? {} : { error: message.status }),
+      success: result.success,
+      mmsRequested: !!mmsRequested,
+      mmsAttached: result.mmsAttached,
+      messageLog: buildLogEntry({
+        success: result.success,
+        twilioSid: result.sid,
+        ...(result.success ? {} : { error: result.error || result.status }),
+      }),
+      ...(result.success ? {} : { error: result.error || result.status }),
     };
   } catch (error: unknown) {
+    if (mmsRequested && 'mediaUrl' in withMedia) {
+      try {
+        const fallback = await deliver(baseParams);
+        return {
+          recipient: { ...recipient, phone: to },
+          success: fallback.success,
+          mmsRequested: true,
+          mmsAttached: false,
+          messageLog: buildLogEntry({
+            success: fallback.success,
+            twilioSid: fallback.sid,
+            ...(fallback.success ? {} : { error: fallback.error || fallback.status }),
+          }),
+          ...(fallback.success
+            ? { error: 'mms_attach_failed_text_sent' }
+            : { error: fallback.error || fallback.status }),
+        };
+      } catch (fallbackError: unknown) {
+        error = fallbackError;
+      }
+    }
+
     const message = formatTwilioError(error);
     console.error('Twilio SMS failed:', { to, error: message });
-    await logSmsSend({
-      hostUid,
-      eventSlug: event.slug,
-      recipientPhone: to,
-      recipientName: recipient.name,
-      body,
-      success: false,
-      error: message,
-    });
 
     return {
       recipient: { ...recipient, phone: to },
       success: false,
+      mmsRequested: !!mmsRequested,
+      mmsAttached: false,
       error: message,
+      messageLog: buildLogEntry({ success: false, error: message }),
     };
   }
 }

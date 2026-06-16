@@ -13,6 +13,7 @@ export type BulkSendEvent = {
   time?: string;
   location?: string;
   inviteUrl: string;
+  coverImage?: string;
 };
 
 export type BulkSendRequest = {
@@ -20,6 +21,8 @@ export type BulkSendRequest = {
   recipients: BulkRecipient[];
   event: BulkSendEvent;
   customMessage?: string;
+  /** When true, attach the event cover image as MMS media (SMS channel only). */
+  includeMedia?: boolean;
 };
 
 export type BulkSendResponse = {
@@ -28,6 +31,8 @@ export type BulkSendResponse = {
   failed: number;
   skipped: number;
   message?: string;
+  mmsRequested?: boolean;
+  mmsAttached?: number;
 };
 
 export type Invitee = {
@@ -64,6 +69,9 @@ export type SendOutcome = {
   recipient: BulkRecipient;
   success: boolean;
   error?: string;
+  mmsRequested?: boolean;
+  mmsAttached?: boolean;
+  messageLog?: MessageLogEntry;
 };
 
 export type AuthContext = {

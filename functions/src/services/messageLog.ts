@@ -22,11 +22,11 @@ export type LogOutboundMessageParams = {
  * Events are the source of truth for guest communication; co-hosts share the same
  * event doc regardless of users/{uid}/hostedEvents indexing.
  */
-export async function logOutboundMessage(params: LogOutboundMessageParams): Promise<void> {
+function buildMessageLogEntry(params: LogOutboundMessageParams): MessageLogEntry {
   const createdAt = params.createdAt ?? Date.now();
   const source = params.source ?? 'api';
 
-  const entry: MessageLogEntry = {
+  return {
     channel: params.channel,
     hostUid: params.hostUid,
     recipientName: params.recipientName,
@@ -40,8 +40,35 @@ export async function logOutboundMessage(params: LogOutboundMessageParams): Prom
     ...(params.twilioSid !== undefined ? { twilioSid: params.twilioSid } : {}),
     ...(params.resendId !== undefined ? { resendId: params.resendId } : {}),
   };
+}
 
+export async function logOutboundMessage(params: LogOutboundMessageParams): Promise<void> {
+  const entry = buildMessageLogEntry(params);
   await admin.firestore().collection(`events/${params.eventSlug}/messageLog`).add(entry);
+}
+
+const MESSAGE_LOG_BATCH_SIZE = 400;
+
+export async function logOutboundMessagesBatch(
+  eventSlug: string,
+  entries: MessageLogEntry[]
+): Promise<void> {
+  if (entries.length === 0) {
+    return;
+  }
+
+  const collection = admin.firestore().collection(`events/${eventSlug}/messageLog`);
+
+  for (let offset = 0; offset < entries.length; offset += MESSAGE_LOG_BATCH_SIZE) {
+    const batch = admin.firestore().batch();
+    const chunk = entries.slice(offset, offset + MESSAGE_LOG_BATCH_SIZE);
+
+    for (const entry of chunk) {
+      batch.set(collection.doc(), entry);
+    }
+
+    await batch.commit();
+  }
 }
 
 export async function messageLogExistsForTwilioSid(
