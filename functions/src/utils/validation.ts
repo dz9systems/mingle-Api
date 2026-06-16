@@ -64,11 +64,17 @@ export function validateBulkSendRequest(
         time: eventData.time,
         location: eventData.location,
         inviteUrl: eventData.inviteUrl,
+        coverImage:
+          typeof eventData.coverImage === 'string' &&
+          eventData.coverImage.startsWith('https://')
+            ? eventData.coverImage
+            : undefined,
       },
       customMessage:
         typeof payload.customMessage === 'string'
           ? payload.customMessage
           : undefined,
+      includeMedia: payload.includeMedia === true,
     },
   };
 }
@@ -101,4 +107,31 @@ export async function throttle<T>(
       await sleep(delayMs);
     }
   }
+}
+
+/** Run work on many items in parallel with a fixed concurrency cap. */
+export async function runConcurrent<T>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<void>
+): Promise<void> {
+  if (items.length === 0) {
+    return;
+  }
+
+  const limit = Math.max(1, Math.min(concurrency, items.length));
+  let nextIndex = 0;
+
+  async function worker(): Promise<void> {
+    while (true) {
+      const index = nextIndex;
+      nextIndex += 1;
+      if (index >= items.length) {
+        return;
+      }
+      await fn(items[index]);
+    }
+  }
+
+  await Promise.all(Array.from({ length: limit }, () => worker()));
 }

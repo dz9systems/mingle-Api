@@ -24,10 +24,13 @@ function formatSmsEventDetails(event: BulkSendEvent): string {
 
 function defaultSmsInviteMessage(params: MessageParams): string {
   const { event, recipientName } = params;
+  const hostNames = formatHostNames(event.hosts, event.hostName);
+  const hostLine =
+    hostNames !== 'your host' ? `${hostNames} · ${event.name}` : event.name;
   const greeting = recipientName?.trim() ? `Hi ${recipientName.trim()}! ` : '';
   const details = formatSmsEventDetails(event);
 
-  return `${greeting}You're invited to ${event.name}${details}. RSVP: ${event.inviteUrl}`;
+  return `${hostLine}\n${greeting}You're invited to ${event.name}${details}. RSVP: ${event.inviteUrl}`;
 }
 
 function appendRsvpLinkIfMissing(body: string, inviteUrl: string): string {
