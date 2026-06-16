@@ -7,6 +7,8 @@ export type MessageMergeContext = {
   time?: string;
   location?: string;
   rsvpLink?: string;
+  enneagramLink?: string;
+  potluckLink?: string;
 };
 
 export const MESSAGE_MERGE_FIELDS = [
@@ -19,6 +21,8 @@ export const MESSAGE_MERGE_FIELDS = [
   '{time}',
   '{location}',
   '{rsvpLink}',
+  '{enneagramLink}',
+  '{potluckLink}',
 ] as const;
 
 /** "June, 06, 2026" from YYYY-MM-DD (local calendar date). */
@@ -70,6 +74,8 @@ export function mergeMessageTemplate(
     time: ctx.time?.trim() || '',
     location: ctx.location?.trim() || '',
     rsvpLink: ctx.rsvpLink?.trim() || '',
+    enneagramLink: ctx.enneagramLink?.trim() || '',
+    potluckLink: ctx.potluckLink?.trim() || '',
   };
 
   return template.replace(/\{(\w+)\}/g, (match, key: string) => {
@@ -78,4 +84,35 @@ export function mergeMessageTemplate(
     }
     return match;
   });
+}
+
+export function buildMessageMergeContext(params: {
+  name?: string;
+  event?: {
+    name?: string;
+    hostName?: string;
+    hosts?: Array<{ name?: string }>;
+    date?: string;
+    time?: string;
+    location?: string;
+  };
+  inviteUrl?: string;
+}): MessageMergeContext {
+  const hostNames = formatHostNames(params.event?.hosts, params.event?.hostName);
+  const inviteUrl = params.inviteUrl?.trim() || '';
+  const baseUrl = inviteUrl.replace(/\/$/, '');
+  const enneagramLink = baseUrl ? `${baseUrl}/enneagram` : '';
+  const potluckLink = baseUrl ? `${baseUrl}/potluck` : '';
+  return {
+    name: params.name,
+    eventName: params.event?.name,
+    hostName: params.event?.hostName || hostNames,
+    hostNames,
+    date: params.event?.date,
+    time: params.event?.time,
+    location: params.event?.location,
+    rsvpLink: inviteUrl,
+    enneagramLink,
+    potluckLink,
+  };
 }

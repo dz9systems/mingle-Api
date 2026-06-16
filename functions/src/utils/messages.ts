@@ -1,5 +1,5 @@
 import type { BulkSendEvent } from '../types';
-import { formatHostNames, formatMessageDate, mergeMessageTemplate } from './messageMerge';
+import { buildMessageMergeContext, formatHostNames, formatMessageDate, mergeMessageTemplate } from './messageMerge';
 
 type MessageParams = {
   event: BulkSendEvent;
@@ -73,17 +73,11 @@ export function defaultInviteMessage(params: MessageParams): string {
 }
 
 function mergeContextFromParams(params: MessageParams) {
-  const hostNames = formatHostNames(params.event.hosts, params.event.hostName);
-  return {
+  return buildMessageMergeContext({
     name: params.recipientName,
-    eventName: params.event.name,
-    hostName: params.event.hostName || hostNames,
-    hostNames,
-    date: params.event.date,
-    time: params.event.time,
-    location: params.event.location,
-    rsvpLink: params.event.inviteUrl,
-  };
+    event: params.event,
+    inviteUrl: params.event.inviteUrl,
+  });
 }
 
 export function resolveMessageBody(params: MessageParams): string {
