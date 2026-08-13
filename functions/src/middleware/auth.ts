@@ -27,6 +27,40 @@ export async function verifyFirebaseAuth(
   }
 }
 
+/** Requires Firebase Auth + `users/{uid}.admin === true` (Admin SDK read). */
+export async function verifyAdminAuth(
+  req: Request,
+  res: Response
+): Promise<{ uid: string; email?: string } | null> {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) {
+    res.status(401).send('unauthorized');
+    return null;
+  }
+
+  const idToken = header.slice('Bearer '.length).trim();
+  if (!idToken) {
+    res.status(401).send('unauthorized');
+    return null;
+  }
+
+  let decoded: admin.auth.DecodedIdToken;
+  try {
+    decoded = await admin.auth().verifyIdToken(idToken);
+  } catch {
+    res.status(401).send('unauthorized');
+    return null;
+  }
+
+  const profileSnap = await admin.firestore().doc(`users/${decoded.uid}`).get();
+  if (profileSnap.data()?.admin !== true) {
+    res.status(403).send('forbidden');
+    return null;
+  }
+
+  return { uid: decoded.uid, email: decoded.email };
+}
+
 export async function isHostOfEvent(uid: string, slug: string): Promise<boolean> {
   const eventSnap = await admin.firestore().doc(`events/${slug}`).get();
   if (!eventSnap.exists) {

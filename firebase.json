@@ -70,6 +70,14 @@
         "function": "googleCalendarSync"
       },
       {
+        "source": "/api/admin/overview",
+        "function": "adminOverview"
+      },
+      {
+        "source": "/api/admin/users",
+        "function": "adminUsers"
+      },
+      {
         "source": "/e/**",
         "function": "renderEvent"
       }
