@@ -93,7 +93,15 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      // Clients own their profile but cannot set/change `admin` (Admin SDK / set-admin script only).
+      allow create: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.get('admin', false) == false;
+      allow update: if isSignedIn()
+        && request.auth.uid == userId
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['admin']);
+      allow delete: if isSignedIn() && request.auth.uid == userId;
 
       match /hostedEvents/{slug} {
         allow read, write: if isSignedIn() && request.auth.uid == userId;

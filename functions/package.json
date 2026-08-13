@@ -16,7 +16,8 @@
     "migrate:twilio-messages": "node scripts/migrate-twilio-messages.mjs",
     "migrate:legacy-log-names": "node scripts/migrate-legacy-log-names.mjs",
     "migrate:message-bodies": "node scripts/migrate-message-bodies.mjs",
-    "cleanup:legacy-logs": "node scripts/cleanup-legacy-logs.mjs"
+    "cleanup:legacy-logs": "node scripts/cleanup-legacy-logs.mjs",
+    "set-admin": "node scripts/set-admin.mjs"
   },
   "dependencies": {
     "firebase-admin": "^13.0.2",

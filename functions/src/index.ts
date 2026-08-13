@@ -17,6 +17,7 @@ import {
   handleImportGuests,
   handleSyncRsvpsToInvitees,
 } from './handlers/importGuests';
+import { handleAdminOverview, handleAdminUsers } from './handlers/admin';
 import { resetStaleRateLimitBuckets } from './utils/rateLimit';
 import { purgeExpiredEventBackups } from './services/eventBackups';
 
@@ -40,6 +41,14 @@ const runtimeOptions = {
   ],
 };
 
+const adminRuntimeOptions = {
+  region: 'us-central1',
+  cors: false,
+  maxInstances: 5,
+  timeoutSeconds: 120,
+  memory: '512MiB' as const,
+};
+
 export const sendEmail = onRequest(runtimeOptions, handleSendEmail);
 export const sendSms = onRequest(runtimeOptions, handleSendSms);
 
@@ -56,6 +65,9 @@ export const spotifySearch = onRequest(runtimeOptions, handleSpotifySearch);
 export const uploadGuestAvatar = onRequest(runtimeOptions, handleUploadGuestAvatar);
 export const importGuests = onRequest(runtimeOptions, handleImportGuests);
 export const syncRsvpsToInvitees = onRequest(runtimeOptions, handleSyncRsvpsToInvitees);
+
+export const adminOverview = onRequest(adminRuntimeOptions, handleAdminOverview);
+export const adminUsers = onRequest(adminRuntimeOptions, handleAdminUsers);
 
 export const renderEvent = onRequest(
   {
