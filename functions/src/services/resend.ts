@@ -77,16 +77,18 @@ export async function sendEmailToRecipient(params: {
     });
 
     const success = !result.error;
-    await logEmailSend({
-      hostUid,
-      eventSlug: event.slug,
-      recipientEmail: email,
-      recipientName: recipient.name,
-      body: bodyText,
-      success,
-      error: result.error?.message,
-      resendId: result.data?.id,
-    });
+    if (success) {
+      await logEmailSend({
+        hostUid,
+        eventSlug: event.slug,
+        recipientEmail: email,
+        recipientName: recipient.name,
+        body: bodyText,
+        success,
+        error: result.error?.message,
+        resendId: result.data?.id,
+      });
+    }
 
     return {
       recipient,
@@ -95,16 +97,6 @@ export async function sendEmailToRecipient(params: {
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'send_failed';
-    await logEmailSend({
-      hostUid,
-      eventSlug: event.slug,
-      recipientEmail: email,
-      recipientName: recipient.name,
-      body: bodyText,
-      success: false,
-      error: message,
-    });
-
     return {
       recipient,
       success: false,

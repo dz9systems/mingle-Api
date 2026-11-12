@@ -40,6 +40,30 @@ export function formatMessageDate(dateStr?: string): string {
   return `${monthName}, ${dayPadded}, ${year}`;
 }
 
+/** "5:00 PM" from a 24-hour "17:00" value. Leaves other text unchanged. */
+export function formatMessageTime(timeStr?: string): string {
+  if (!timeStr?.trim()) return '';
+  const raw = timeStr.trim();
+  const match = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*([AaPp][Mm])?$/);
+  if (!match) return raw;
+
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2];
+  const ampmGiven = match[3];
+  if (hours > 23 || (ampmGiven && hours > 12)) return raw;
+
+  if (ampmGiven) {
+    const isPm = ampmGiven.toLowerCase() === 'pm';
+    if (hours === 12) hours = isPm ? 12 : 0;
+    else if (isPm) hours += 12;
+  }
+
+  const suffix = hours >= 12 ? 'PM' : 'AM';
+  let hour12 = hours % 12;
+  if (hour12 === 0) hour12 = 12;
+  return `${hour12}:${minutes} ${suffix}`;
+}
+
 /** "Isaiah", "Isaiah and Louis", or "Isaiah, Louis, and Marie" from host entries. */
 export function formatHostNames(
   hosts: Array<{ name?: string }> | undefined,
@@ -71,7 +95,7 @@ export function mergeMessageTemplate(
     hostName: ctx.hostName?.trim() || ctx.hostNames?.trim() || 'your host',
     hostNames: ctx.hostNames?.trim() || ctx.hostName?.trim() || 'your hosts',
     date: formatMessageDate(ctx.date) || '',
-    time: ctx.time?.trim() || '',
+    time: formatMessageTime(ctx.time) || '',
     location: ctx.location?.trim() || '',
     rsvpLink: ctx.rsvpLink?.trim() || '',
     enneagramLink: ctx.enneagramLink?.trim() || '',

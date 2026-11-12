@@ -121,6 +121,7 @@ export async function handleSendSms(req: Request, res: Response): Promise<void> 
   }
 
   const messageLogs = outcomes
+    .filter((outcome) => outcome.success && outcome.messageLog)
     .map((outcome) => outcome.messageLog)
     .filter((entry): entry is NonNullable<typeof entry> => !!entry);
 
